@@ -1,30 +1,29 @@
-# 🌡️ Imperial Valley Heat Death Research - Complete Package
+# IV HRI Scraper
 
-## 📦 What You Have
+## What we have here
 
-A **production-ready web scraper** that:
-- ✅ Scrapes 5+ Imperial Valley news sources (English + Spanish)
-- ✅ Uses newspaper4k for intelligent article extraction
-- ✅ Matches 40+ heat-related keywords with weighted scoring
-- ✅ Stores results in organized SQLite database
-- ✅ Includes ethical rate limiting and error handling
-- ✅ Generates detailed reports and logs
+- Scrapes 5+ Imperial Valley news sources (English + Spanish)
+- Uses newspaper4k for intelligent article extraction
+- Matches 40+ heat-related keywords with weighted scoring
+- Stores results in organized SQLite database
+- Includes ethical rate limiting and error handling
+- Generates detailed reports and logs
 
 ---
 
-## 🚀 Quick Start (3 Steps)
+## Quick Start (3 Steps)
 
-### 1️⃣ Install Dependencies
+### 1️ Install Dependencies
 ```bash
 pip install newspaper4k beautifulsoup4 requests lxml --break-system-packages
 ```
 
-### 2️⃣ Run the Scraper
+### 2️ Run the Scraper
 ```bash
 python imperial_valley_scraper.py
 ```
 
-### 3️⃣ View Results
+### 3️ View Results
 ```bash
 # Check the report
 cat scraping_report.txt
@@ -33,22 +32,10 @@ cat scraping_report.txt
 sqlite3 imperial_valley_heat_deaths.db "SELECT title, heat_score FROM articles ORDER BY heat_score DESC LIMIT 10;"
 ```
 
----
-
-## 📁 Files Included
-
-| File | Purpose |
-|------|---------|
-| **imperial_valley_scraper.py** | Main scraper (500+ lines, production-ready) |
-| **SCRAPER_GUIDE.md** | Complete usage documentation |
-| **heat_research_setup.md** | Full research context & methodology |
-| **DEMO_RESULTS.md** | Validation with real Imperial Valley Press article |
-| **demo_scraper.py** | Simplified demo version |
-| **heat_scraper_poc.py** | Original proof-of-concept |
 
 ---
 
-## 🎯 Key Features
+## Features
 
 ### Bilingual Support
 ```python
@@ -59,7 +46,7 @@ sqlite3 imperial_valley_heat_deaths.db "SELECT title, heat_score FROM articles O
 'muerte por calor', 'golpe de calor', 'hipertermia fatal'
 ```
 
-### Smart Scoring (Weighted)
+### Weighted Scoring Tool
 ```
 Primary Death Keywords:    10 points each
 Location Specific:          8 points each
@@ -84,7 +71,7 @@ Environmental Context:      2 points each
 
 ---
 
-## 📊 Scoring Example
+## Scoring Ex
 
 **Article:** "First probable heat-related deaths reported"
 
@@ -99,7 +86,7 @@ TOTAL: 39 points → HIGHLY RELEVANT ✅
 
 ---
 
-## 🔍 Research Context
+## Research Context
 
 ### Ground Truth Validation: Maricopa County, AZ
 - **Best choice** for model validation
@@ -117,7 +104,7 @@ TOTAL: 39 points → HIGHLY RELEVANT ✅
 
 ---
 
-## ⚠️ Before Running
+## Before Running
 
 ### 1. Check robots.txt
 ```bash
@@ -137,15 +124,6 @@ NEWS_SOURCES = [NEWS_SOURCES[0]]  # Just IV Press
 tail -f scraper.log
 ```
 
----
-
-## 📈 Expected Results
-
-### First Run (50 articles per source)
-- **Runtime:** ~30-45 minutes (with 12-second delays)
-- **Articles scraped:** 50-200
-- **Relevant articles:** 5-20 (depending on date range)
-- **Database size:** ~5-10 MB
 
 ### Sample Output
 ```
@@ -171,7 +149,7 @@ Top Article:
 
 ---
 
-## 🛠️ Customization
+## Customization
 
 ### Add More Sources
 ```python
@@ -210,7 +188,7 @@ with open('heat_deaths.csv', 'w', newline='') as f:
 
 ---
 
-## 🎓 Next Steps
+## Next Steps
 
 ### 1. Collect Imperial Valley Data
 Run scraper regularly (daily/weekly) to build dataset
@@ -218,7 +196,7 @@ Run scraper regularly (daily/weekly) to build dataset
 ### 2. Download Maricopa County Data
 - Visit: https://www.maricopa.gov/1858/Heat-Surveillance
 - Download annual reports (2006-2024)
-- Extract: demographics, temperatures, death counts
+- Extract: demographics, temperatures, death counts, and do the same for that county to see how the patterns look
 
 ### 3. Model Development
 Use your collected data + Maricopa ground truth to:
@@ -229,21 +207,10 @@ Use your collected data + Maricopa ground truth to:
 ### 4. Compare & Validate
 Test if Imperial Valley reporting patterns match Maricopa patterns
 
----
-
-## 📞 Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| ImportError: newspaper4k | `pip install newspaper4k` |
-| Connection timeout | Increase `REQUEST_DELAY` to 15-20 sec |
-| No articles found | Check if site structure changed |
-| Blocked by website | Wait 24 hours, increase delays |
-| Score always 0 | Check article dates (need recent heat events) |
 
 ---
 
-## ✅ Validation
+## Validation
 
 **The scraper has been validated** using actual Imperial Valley Press content:
 - Successfully identified heat death article
@@ -255,32 +222,4 @@ See `DEMO_RESULTS.md` for full validation details.
 
 ---
 
-## 📄 License & Ethics
 
-✅ **Allowed:**
-- Academic research
-- Data analysis
-- Model validation
-- Citing sources
-
-❌ **Not Allowed:**
-- Commercial use without permission
-- Republishing article content
-- Ignoring rate limits
-- Violating Terms of Service
-
-**Always:**
-- Respect robots.txt
-- Use conservative rate limiting
-- Attribute sources
-- Follow ethical research practices
-
----
-
-**🎉 You're Ready to Start!**
-
-For detailed instructions, see **SCRAPER_GUIDE.md**
-
-For research context, see **heat_research_setup.md**
-
-For validation proof, see **DEMO_RESULTS.md**
