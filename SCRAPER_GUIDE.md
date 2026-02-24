@@ -306,30 +306,4 @@ with open('heat_deaths.csv', 'w', newline='', encoding='utf-8') as f:
 
 ---
 
-## Legal & Ethical Considerations
-
-✅ **DO:**
-- Respect robots.txt
-- Use conservative rate limiting
-- Identify yourself in User-Agent
-- Attribute sources properly
-- Use data for research only
-
-❌ **DON'T:**
-- Overwhelm servers with requests
-- Ignore robots.txt
-- Republish scraped content
-- Use for commercial purposes without permission
-- Share full article texts publicly
-
----
-
-## Support & Feedback
-
-- Check `scraper.log` for errors
-- Review `DEMO_RESULTS.md` for validation
-- See `heat_research_setup.md` for full research context
-
----
-
 **Last Updated:** February 2026
