@@ -218,7 +218,6 @@ Test if Imperial Valley reporting patterns match Maricopa patterns
 - Extracted all relevant data points
 - Properly stored in database
 
-See `DEMO_RESULTS.md` for full validation details.
 
 ---
 
