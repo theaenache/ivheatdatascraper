@@ -11,7 +11,7 @@
 
 ---
 
-## Quick Start (3 Steps)
+## Quick Start 
 
 ### 1️ Install Dependencies
 ```bash
