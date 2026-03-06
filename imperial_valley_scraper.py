@@ -1,13 +1,3 @@
-"""
-Imperial Valley Heat Death News Scraper
-Uses newspaper4k for article extraction and supports English/Spanish content
-
-IMPORTANT: Before running, ensure you have:
-1. Checked robots.txt for each source
-2. Configured rate limiting appropriately
-3. Reviewed Terms of Service
-"""
-
 import sqlite3
 import re
 import hashlib
@@ -22,7 +12,7 @@ try:
     from bs4 import BeautifulSoup
 except ImportError:
     print("ERROR: Required packages not installed.")
-    print("Install with: pip install newspaper4k beautifulsoup4 requests lxml --break-system-packages")
+    print("Install with: pip install newspaper4k beautifulsoup4 requests lxml")
     exit(1)
 
 # Configure logging
@@ -141,7 +131,8 @@ KEYWORDS_EN = {
     'exclusions': {  # Auto-reject
         'keywords': [
             r'heated\s+argument', r'heated\s+debate', r'heat\s+of\s+the\s+moment',
-            r'preheat', r'heat\s+pump', r'heating\s+system'
+            r'preheat', r'heat\s+pump', r'heating\s+system', r'heated\s+game',
+            r'heated\s+competition'
         ],
         'weight': -100
     }
@@ -175,7 +166,7 @@ KEYWORDS_ES = {
 
 # Rate limiting
 REQUEST_DELAY = 12  # seconds between requests (conservative)
-MAX_ARTICLES_PER_SOURCE = 10  # per session (set to 50 for production runs)
+MAX_ARTICLES_PER_SOURCE = 10  # per session (CHANGE TO 50 FOR PRODUCTION)
 MAX_ARTICLES_PER_DAY = 200  # total limit
 
 # ============================================================================
@@ -330,6 +321,79 @@ def classify_relevance(score: float) -> str:
         return "NOT_RELEVANT"
 
 # ============================================================================
+# URL VALIDATION (FIXED!)
+# ============================================================================
+
+def is_valid_article_url(url: str) -> bool:
+    """
+    Validate if URL is an actual article (not social media, category, or nav page).
+    
+    Args:
+        url: URL to check
+    
+    Returns:
+        True if valid article URL, False otherwise
+    """
+    url_lower = url.lower()
+    
+    # FIRST: Exclude external domains (social share buttons)
+    external_domains = [
+        'facebook.com', 'twitter.com', 'wa.me', 'linkedin.com',
+        't.co', 'bit.ly', 'tinyurl.com', 'mailto:', 'javascript:',
+        'instagram.com', 'pinterest.com', 'reddit.com'
+    ]
+    if any(domain in url_lower for domain in external_domains):
+        logger.debug(f"  ❌ Excluded (external): {url[:80]}")
+        return False
+    
+    # SECOND: Must be from valid news domains
+    valid_domains = [
+        'ivpressonline.com', 'calexicochronicle.com',
+        'holtvilletribune.com', 'thedesertreview.com'
+    ]
+    if not any(domain in url_lower for domain in valid_domains):
+        logger.debug(f"  ❌ Excluded (wrong domain): {url[:80]}")
+        return False
+    
+    # THIRD: Exclude navigation/category pages
+    exclude_patterns = [
+        '/users/', '/login', '/signup', '/search', '/category/',
+        '/tag/', '/author/', '/page/', '/feed', '/rss', '/xml',
+        '/news/$', '/news$', '/local/$', '/local$',  # Section homepages
+        '/quicknews/', '/education$', '/county$', '/border/$', '/crime$',
+        '/waterandpower/', '/weather/', '/sports/', '/opinion/',
+        '/obituaries/', '/classifieds/', '/subscribe', '/contact',
+        '/about', '/advertising', '/staff', '/submit', '/e-edition'
+    ]
+    
+    for pattern in exclude_patterns:
+        if pattern in url_lower or url_lower.endswith(pattern.replace('$', '')):
+            logger.debug(f"  ❌ Excluded (nav page): {url[:80]}")
+            return False
+    
+    # FOURTH: Must match actual article URL patterns
+    
+    # Imperial Valley Press: /article_XXXXXXXX-XXXX-XXXX.html
+    if 'ivpressonline.com' in url_lower:
+        if 'article_' in url_lower and '.html' in url_lower:
+            # Verify it's not embedded in a share URL
+            if '/article_' in url_lower and url_lower.count('article_') == 1:
+                logger.debug(f"  YES Valid IV Press article: {url[:80]}")
+                return True
+            else:
+                logger.debug(f"  NO Excluded (malformed): {url[:80]}")
+                return False
+    
+    # Chronicle/Tribune: /YYYY/MM/DD/article-title/
+    if any(domain in url_lower for domain in ['chronicle', 'tribune', 'desert']):
+        if re.search(r'/20\d{2}/\d{2}/\d{2}/', url_lower) and len(url) > 40:
+            logger.debug(f"  YES Valid date-based article: {url[:80]}")
+            return True
+    
+    logger.debug(f"  NO Excluded (no article pattern): {url[:80]}")
+    return False
+
+# ============================================================================
 # WEB SCRAPING FUNCTIONS
 # ============================================================================
 
@@ -344,48 +408,6 @@ def check_if_scraped(url: str, conn: sqlite3.Connection) -> bool:
     cursor.execute('SELECT id FROM articles WHERE url_hash = ?', (url_hash,))
     return cursor.fetchone() is not None
 
-def is_valid_article_url(url: str) -> bool:
-    """
-    Validate if URL is an actual article (not category/navigation page).
-    
-    Args:
-        url: URL to check
-    
-    Returns:
-        True if valid article URL, False otherwise
-    """
-    url_lower = url.lower()
-    
-    # EXCLUDE these patterns (navigation/category pages)
-    exclude_patterns = [
-        '/users/', '/login', '/signup', '/search', '/category/',
-        '/tag/', '/author/', '/page/', '/feed', '/rss',
-        '/news/$', '/news$', '/local/$', '/local$',  # Section homepages
-        '/quicknews/', '/education$', '/county$', '/border/$', '/crime$',
-        '/waterandpower/', '/weather/', '/sports/', '/opinion/',
-        '/obituaries/', '/classifieds/', '/subscribe', '/contact',
-        '/about', '/advertising', '/staff', '/submit'
-    ]
-    
-    for pattern in exclude_patterns:
-        if pattern in url_lower or url_lower.endswith(pattern.replace('$', '')):
-            return False
-    
-    # INCLUDE only URLs that match actual article patterns
-    # Imperial Valley Press: /article_XXXXXXXX-XXXX-XXXX.html
-    if 'article_' in url_lower and '.html' in url_lower:
-        return True
-    
-    # Date-based URLs: /2024/07/15/article-title/
-    if re.search(r'/20\d{2}/\d{2}/\d{2}/', url_lower) and len(url) > 40:
-        return True
-    
-    # Chronicle pattern: /2026/03/05/article-title/
-    if 'chronicle' in url_lower and re.search(r'/20\d{2}/\d{2}/\d{2}/', url_lower):
-        return True
-    
-    return False
-
 def extract_article_links(source: Dict, max_links: int = 50) -> List[str]:
     """
     Extract article links from news source homepage/sections.
@@ -398,6 +420,7 @@ def extract_article_links(source: Dict, max_links: int = 50) -> List[str]:
         List of article URLs
     """
     all_links = []
+    total_links_found = 0
     
     for section in source['sections']:
         try:
@@ -415,6 +438,7 @@ def extract_article_links(source: Dict, max_links: int = 50) -> List[str]:
             
             # Find all links
             links = soup.find_all('a', href=True)
+            total_links_found += len(links)
             
             for link in links:
                 href = link['href']
@@ -427,17 +451,17 @@ def extract_article_links(source: Dict, max_links: int = 50) -> List[str]:
                 else:
                     continue
                 
-                # ✅ NEW: Use strict validation for actual articles
+                # FIXED: Use strict validation for actual articles only
                 if is_valid_article_url(full_url) and full_url not in all_links:
                     all_links.append(full_url)
-                    logger.debug(f"  ✓ Valid article: {full_url}")
             
-            logger.info(f"Found {len(links)} total links, {len(all_links)} valid articles")
+            logger.info(f"  Found {len(links)} total links, {len(all_links)} valid articles so far")
             time.sleep(REQUEST_DELAY)  # Rate limiting
             
         except Exception as e:
             logger.error(f"Error fetching links from {url}: {e}")
     
+    logger.info(f"Total: {total_links_found} links scanned, {len(all_links)} valid articles found")
     return all_links[:max_links]
 
 def scrape_article_newspaper4k(url: str, language: str = 'en') -> Optional[Dict]:
@@ -526,7 +550,7 @@ def save_article(article_data: Dict, source_name: str, source_bias: str,
             ))
         
         conn.commit()
-        logger.info(f"✓ Saved article ID {article_id}: {article_data['title'][:60]}")
+        logger.info(f"  SAVED to database (ID: {article_id})")
         return article_id
         
     except Exception as e:
@@ -579,7 +603,14 @@ def scrape_source(source: Dict, conn: sqlite3.Connection,
         article_urls = extract_article_links(source, max_links=max_articles)
         stats['articles_found'] = len(article_urls)
         
-        logger.info(f"Found {len(article_urls)} articles to process")
+        if len(article_urls) == 0:
+            logger.warning(f"⚠️  No valid article URLs found for {source['name']}")
+            logger.info("This may be normal if:")
+            logger.info("  - The site structure changed")
+            logger.info("  - No recent articles exist")
+            logger.info("  - The URL patterns need adjustment")
+        else:
+            logger.info(f"Found {len(article_urls)} articles to process")
         
         # Scrape each article
         for i, url in enumerate(article_urls, 1):
@@ -613,6 +644,12 @@ def scrape_source(source: Dict, conn: sqlite3.Connection,
             relevance = classify_relevance(score)
             
             logger.info(f"  Heat Score: {score:.1f} ({relevance})")
+            
+            # Display matched keywords
+            if score > 0:
+                logger.info(f"  Keywords matched:")
+                for category, data in categories.items():
+                    logger.info(f"    - {category}: {data['matches']} matches ({data['score']} points)")
             
             # Only save if relevant
             if score > 0:
@@ -667,50 +704,58 @@ def generate_summary_report(conn: sqlite3.Connection) -> str:
     total = cursor.fetchone()[0]
     report.append(f"\nTotal Articles in Database: {total}")
     
-    # By relevance
-    report.append("\nBy Relevance Category:")
-    cursor.execute('''
-        SELECT category, COUNT(*), AVG(heat_score)
-        FROM articles
-        GROUP BY category
-        ORDER BY AVG(heat_score) DESC
-    ''')
-    for category, count, avg_score in cursor.fetchall():
-        report.append(f"  {category:25} {count:4} articles (avg score: {avg_score:.1f})")
-    
-    # By source
-    report.append("\nBy Source:")
-    cursor.execute('''
-        SELECT source, COUNT(*), AVG(heat_score)
-        FROM articles
-        GROUP BY source
-        ORDER BY COUNT(*) DESC
-    ''')
-    for source, count, avg_score in cursor.fetchall():
-        report.append(f"  {source:30} {count:4} articles (avg score: {avg_score:.1f})")
-    
-    # By language
-    report.append("\nBy Language:")
-    cursor.execute('''
-        SELECT language, COUNT(*)
-        FROM articles
-        GROUP BY language
-    ''')
-    for lang, count in cursor.fetchall():
-        lang_name = "English" if lang == "en" else "Spanish"
-        report.append(f"  {lang_name:30} {count:4} articles")
-    
-    # Top articles
-    report.append("\nTop 10 Most Relevant Articles:")
-    cursor.execute('''
-        SELECT title, source, heat_score, category
-        FROM articles
-        ORDER BY heat_score DESC
-        LIMIT 10
-    ''')
-    for i, (title, source, score, category) in enumerate(cursor.fetchall(), 1):
-        report.append(f"\n  {i}. [{score:.1f}] {title[:70]}")
-        report.append(f"     Source: {source} | Category: {category}")
+    if total == 0:
+        report.append("\n⚠️  No articles were saved.")
+        report.append("This could mean:")
+        report.append("  - No articles matched the heat death keywords")
+        report.append("  - The websites have changed structure")
+        report.append("  - The URL filters need adjustment")
+        report.append("\nCheck scraper.log for detailed information.")
+    else:
+        # By relevance
+        report.append("\nBy Relevance Category:")
+        cursor.execute('''
+            SELECT category, COUNT(*), AVG(heat_score)
+            FROM articles
+            GROUP BY category
+            ORDER BY AVG(heat_score) DESC
+        ''')
+        for category, count, avg_score in cursor.fetchall():
+            report.append(f"  {category:25} {count:4} articles (avg score: {avg_score:.1f})")
+        
+        # By source
+        report.append("\nBy Source:")
+        cursor.execute('''
+            SELECT source, COUNT(*), AVG(heat_score)
+            FROM articles
+            GROUP BY source
+            ORDER BY COUNT(*) DESC
+        ''')
+        for source, count, avg_score in cursor.fetchall():
+            report.append(f"  {source:30} {count:4} articles (avg score: {avg_score:.1f})")
+        
+        # By language
+        report.append("\nBy Language:")
+        cursor.execute('''
+            SELECT language, COUNT(*)
+            FROM articles
+            GROUP BY language
+        ''')
+        for lang, count in cursor.fetchall():
+            lang_name = "English" if lang == "en" else "Spanish"
+            report.append(f"  {lang_name:30} {count:4} articles")
+        
+        # Top articles
+        report.append("\nTop 10 Most Relevant Articles:")
+        cursor.execute('''
+            SELECT title, source, heat_score, category
+            FROM articles
+            ORDER BY heat_score DESC
+            LIMIT 10
+        ''')
+        for i, (title, source, score, category) in enumerate(cursor.fetchall(), 1):
+            report.append(f"\n  {i}. [{score:.1f}] {title[:70]}")
+            report.append(f"     Source: {source} | Category: {category}")
     
     report.append("\n" + "="*80)
     
@@ -723,9 +768,11 @@ def generate_summary_report(conn: sqlite3.Connection) -> str:
 def main():
     """Main scraping workflow."""
     logger.info("="*80)
-    logger.info("IMPERIAL VALLEY HEAT DEATH SCRAPER")
+    logger.info("IMPERIAL VALLEY HEAT DEATH SCRAPER - FIXED VERSION")
     logger.info("="*80)
     logger.info(f"Start time: {datetime.now()}")
+    logger.info(f"Max articles per source: {MAX_ARTICLES_PER_SOURCE}")
+    logger.info(f"Request delay: {REQUEST_DELAY} seconds")
     
     # Initialize database
     conn = init_database()
@@ -735,6 +782,13 @@ def main():
     for source in NEWS_SOURCES:
         stats = scrape_source(source, conn)
         all_stats.append(stats)
+        
+        # Log quick stats
+        logger.info(f"\n📊 {source['name']} Summary:")
+        logger.info(f"  - Valid articles found: {stats['articles_found']}")
+        logger.info(f"  - New articles: {stats['articles_new']}")
+        logger.info(f"  - Articles saved: {stats['articles_scraped']}")
+        logger.info(f"  - Errors: {stats['errors']}")
     
     # Generate and display report
     report = generate_summary_report(conn)
@@ -746,9 +800,12 @@ def main():
     
     conn.close()
     logger.info(f"\nScraping completed at: {datetime.now()}")
-    logger.info(f"Database: imperial_valley_heat_deaths.db")
+    logger.info(f"DB: imperial_valley_heat_deaths.db")
     logger.info(f"Log file: scraper.log")
     logger.info(f"Report: scraping_report.txt")
+    logger.info("\nTo view results:")
+    logger.info("  python simple_view.py")
+    logger.info("  python export_to_excel.py")
 
 if __name__ == '__main__':
     main()
