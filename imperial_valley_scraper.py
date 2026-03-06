@@ -175,7 +175,7 @@ KEYWORDS_ES = {
 
 # Rate limiting
 REQUEST_DELAY = 12  # seconds between requests (conservative)
-MAX_ARTICLES_PER_SOURCE = 50  # per session
+MAX_ARTICLES_PER_SOURCE = 10  # per session (set to 50 for production runs)
 MAX_ARTICLES_PER_DAY = 200  # total limit
 
 # ============================================================================
@@ -344,6 +344,48 @@ def check_if_scraped(url: str, conn: sqlite3.Connection) -> bool:
     cursor.execute('SELECT id FROM articles WHERE url_hash = ?', (url_hash,))
     return cursor.fetchone() is not None
 
+def is_valid_article_url(url: str) -> bool:
+    """
+    Validate if URL is an actual article (not category/navigation page).
+    
+    Args:
+        url: URL to check
+    
+    Returns:
+        True if valid article URL, False otherwise
+    """
+    url_lower = url.lower()
+    
+    # EXCLUDE these patterns (navigation/category pages)
+    exclude_patterns = [
+        '/users/', '/login', '/signup', '/search', '/category/',
+        '/tag/', '/author/', '/page/', '/feed', '/rss',
+        '/news/$', '/news$', '/local/$', '/local$',  # Section homepages
+        '/quicknews/', '/education$', '/county$', '/border/$', '/crime$',
+        '/waterandpower/', '/weather/', '/sports/', '/opinion/',
+        '/obituaries/', '/classifieds/', '/subscribe', '/contact',
+        '/about', '/advertising', '/staff', '/submit'
+    ]
+    
+    for pattern in exclude_patterns:
+        if pattern in url_lower or url_lower.endswith(pattern.replace('$', '')):
+            return False
+    
+    # INCLUDE only URLs that match actual article patterns
+    # Imperial Valley Press: /article_XXXXXXXX-XXXX-XXXX.html
+    if 'article_' in url_lower and '.html' in url_lower:
+        return True
+    
+    # Date-based URLs: /2024/07/15/article-title/
+    if re.search(r'/20\d{2}/\d{2}/\d{2}/', url_lower) and len(url) > 40:
+        return True
+    
+    # Chronicle pattern: /2026/03/05/article-title/
+    if 'chronicle' in url_lower and re.search(r'/20\d{2}/\d{2}/\d{2}/', url_lower):
+        return True
+    
+    return False
+
 def extract_article_links(source: Dict, max_links: int = 50) -> List[str]:
     """
     Extract article links from news source homepage/sections.
@@ -385,13 +427,12 @@ def extract_article_links(source: Dict, max_links: int = 50) -> List[str]:
                 else:
                     continue
                 
-                # Filter for article-like URLs
-                if any(indicator in href.lower() for indicator in [
-                    'article', 'news', '/202', 'story', 'post'
-                ]) and full_url not in all_links:
+                # ✅ NEW: Use strict validation for actual articles
+                if is_valid_article_url(full_url) and full_url not in all_links:
                     all_links.append(full_url)
+                    logger.debug(f"  ✓ Valid article: {full_url}")
             
-            logger.info(f"Found {len(links)} total links, {len(all_links)} potential articles")
+            logger.info(f"Found {len(links)} total links, {len(all_links)} valid articles")
             time.sleep(REQUEST_DELAY)  # Rate limiting
             
         except Exception as e:
