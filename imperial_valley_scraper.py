@@ -199,7 +199,7 @@ def init_database(db_path: str = 'imperial_valley_heat_deaths.db') -> sqlite3.Co
         )
     ''')
     
-    # Keyword matches table (for detailed analysis)
+    # Keyword matches table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS keyword_matches (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -321,7 +321,7 @@ def classify_relevance(score: float) -> str:
         return "NOT_RELEVANT"
 
 # ============================================================================
-# URL VALIDATION (FIXED!)
+# URL VALIDATION
 # ============================================================================
 
 def is_valid_article_url(url: str) -> bool:
@@ -336,14 +336,14 @@ def is_valid_article_url(url: str) -> bool:
     """
     url_lower = url.lower()
     
-    # FIRST: Exclude external domains (social share buttons)
+    # FIRST: Exclude external domains (social share buttons, had trouble with this in early experiments)
     external_domains = [
         'facebook.com', 'twitter.com', 'wa.me', 'linkedin.com',
         't.co', 'bit.ly', 'tinyurl.com', 'mailto:', 'javascript:',
         'instagram.com', 'pinterest.com', 'reddit.com'
     ]
     if any(domain in url_lower for domain in external_domains):
-        logger.debug(f"  ❌ Excluded (external): {url[:80]}")
+        logger.debug(f" EXCLUDED (external): {url[:80]}")
         return False
     
     # SECOND: Must be from valid news domains
@@ -352,7 +352,7 @@ def is_valid_article_url(url: str) -> bool:
         'holtvilletribune.com', 'thedesertreview.com'
     ]
     if not any(domain in url_lower for domain in valid_domains):
-        logger.debug(f"  ❌ Excluded (wrong domain): {url[:80]}")
+        logger.debug(f" EXCLUDED (incorrect domain): {url[:80]}")
         return False
     
     # THIRD: Exclude navigation/category pages
@@ -368,7 +368,7 @@ def is_valid_article_url(url: str) -> bool:
     
     for pattern in exclude_patterns:
         if pattern in url_lower or url_lower.endswith(pattern.replace('$', '')):
-            logger.debug(f"  ❌ Excluded (nav page): {url[:80]}")
+            logger.debug(f" EXCLUDED (nav page): {url[:80]}")
             return False
     
     # FOURTH: Must match actual article URL patterns
@@ -604,7 +604,7 @@ def scrape_source(source: Dict, conn: sqlite3.Connection,
         stats['articles_found'] = len(article_urls)
         
         if len(article_urls) == 0:
-            logger.warning(f"⚠️  No valid article URLs found for {source['name']}")
+            logger.warning(f"!!!No valid article URLs found for {source['name']}")
             logger.info("This may be normal if:")
             logger.info("  - The site structure changed")
             logger.info("  - No recent articles exist")
@@ -705,7 +705,7 @@ def generate_summary_report(conn: sqlite3.Connection) -> str:
     report.append(f"\nTotal Articles in Database: {total}")
     
     if total == 0:
-        report.append("\n⚠️  No articles were saved.")
+        report.append("\n!!!No articles were saved.")
         report.append("This could mean:")
         report.append("  - No articles matched the heat death keywords")
         report.append("  - The websites have changed structure")
