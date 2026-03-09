@@ -1,8 +1,6 @@
-# IV HRI Scraper
-
 ## What our scraper can do: 
 
-We can parse through 5+ Imperial Valley news sources (English + Spanish). We utilize newspaper4k for intelligent article extraction. With our inventory of heat related keywords and contexts, we implement a weighted scoring protocol in which words that are more indicative of heat related illness are rated higher. We also make note of the article link, date accessed, publish date, authors, and the key words + contexts that our scraper flagged. We then organize our results in an SQLite database. We have limitations put in place to ensure ethical rate limiting and human-in-the-loop error handling. Our model generates detailed reports and logs. 
+We can parse through linked Imperial Valley news sources (English + Spanish). To start, we utilize newspaper4k for intelligent article extraction. With our inventory of heat related keywords and contexts, we implement a weighted scoring protocol in which words that are more indicative of heat related illness are rated higher. We also make note of the article link, date accessed, publish date, authors, and the key words + contexts that our scraper flagged. We then organize our results in an SQLite database. We have limitations put in place to ensure ethical rate limiting and human-in-the-loop error handling. Our model generates detailed reports and logs. 
 
 ---
 
