@@ -130,7 +130,7 @@ KEYWORDS_EN = {
     }
 }
 
-REQUEST_DELAY = 12
+REQUEST_DELAY = 15
 MIN_SCORE_THRESHOLD = 10  # Only save articles with score >= 10, easily editable if this is too lenient
 
 # ============================================================================
@@ -579,17 +579,17 @@ def main():
         try:
             num = int(selection)
             if num > len(all_discovered):
-                print(f"\n⚠️ Requested {num} but only {len(all_discovered)} available")
+                print(f"\n!!Requested {num} but only {len(all_discovered)} available")
                 articles_to_scrape = all_discovered
                 print(f"✓ Will scrape all {len(articles_to_scrape)} articles")
             elif num < 1:
-                print(f"\n⚠️ Invalid number. Will scrape 20 articles")
+                print(f"\n!! Invalid number. Will scrape 20 articles")
                 articles_to_scrape = all_discovered[:20]
             else:
                 articles_to_scrape = all_discovered[:num]
                 print(f"\n✓ Will scrape {len(articles_to_scrape)} articles")
         except:
-            print(f"\n⚠️ Invalid input. Will scrape 50 articles")
+            print(f"\n!! Invalid input. Will scrape 50 articles")
             articles_to_scrape = all_discovered[:50]
     
     # Scraping phase
@@ -672,7 +672,7 @@ def main():
             LIMIT 10
         ''')
         
-        print(f"\n📰 NEWLY SAVED ARTICLES (Top 10):")
+        print(f"\nNEWLY SAVED ARTICLES (Top 10):")
         for i, (title, score, category, date) in enumerate(cursor.fetchall(), 1):
             print(f"\n{i}. [{score:.1f}] {title[:70]}")
             print(f"   {category} | {date}")
