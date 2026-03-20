@@ -1,10 +1,7 @@
-"""
-ARCHIVE-AWARE URL SCRAPER
-==========================
 
-Downloads articles from Archive.org snapshots instead of live site.
-NO RATE LIMITING - Uses archived versions!
-"""
+##Downloads articles from Archive.org snapshots instead of live site.
+##(hopefully) NO RATE LIMITING Uses archived versions!
+
 
 import sqlite3
 import re
@@ -27,7 +24,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configuration
+# Config
 REQUEST_DELAY_MIN = 2
 REQUEST_DELAY_MAX = 4
 MIN_SCORE_THRESHOLD = 10
@@ -105,7 +102,7 @@ KEYWORDS_EN = {
 }
 
 # ============================================================================
-# DATABASE
+# db
 # ============================================================================
 
 def init_database(db_path: str = 'imperial_valley_heat_deaths.db') -> sqlite3.Connection:
